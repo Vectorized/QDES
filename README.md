@@ -14,7 +14,7 @@ It is an approximate version of [Constant Rate Issuance Sales Protocol (CRISP)](
 
   - All popularity levels. 
   - All mint periods, be it an hour to years.
-  - Any blockchain, as it uses `block.timestamp` instead of `block.number`.
+  - All EVM compatible blockchains, as it uses `block.timestamp` instead of `block.number`.
 
 - Enable price discovery.
 
@@ -68,11 +68,11 @@ Because the price can fluctuate upwards, your UI must include an extra field to 
 
 ## Contributing
 
-- Fork the Project
-- Create your Feature Branch (git checkout -b feature/AmazingFeature)
-- Commit your Changes (git commit -m 'Add some AmazingFeature')
-- Push to the Branch (git push origin feature/AmazingFeature)
-- Open a Pull Request
+1. Fork the Project
+2. Create your Feature Branch (git checkout -b feature/AmazingFeature)
+3. Commit your Changes (git commit -m 'Add some AmazingFeature')
+4. Push to the Branch (git push origin feature/AmazingFeature)
+5. Open a Pull Request
 
 ### Running tests locally
 
@@ -88,6 +88,8 @@ This repo uses [Foundry](https://github.com/gakonst/foundry).
 - Make a sample NFT contract that uses it.
 - Make a sample frontend UI to demonstrate how to implement it.
 - Make ERC20 version.
+
+Feel free to help on any of the points. 
 
 ## Disclaimer
 
