@@ -33,11 +33,11 @@ contract MockQDES is QDES {
         _qdesPurchase(quantity);
     }
 
-    function growthNumerator() external view returns (uint64) {
-        return _qdesGrowthNumerator();
+    function surgeNumerator() external view returns (uint64) {
+        return _qdesSurgeNumerator();
     }
 
-    function growthDenominator() external view returns (uint64) {
-        return _qdesGrowthDenominator();
+    function surgeDenominator() external view returns (uint64) {
+        return _qdesSurgeDenominator();
     }
 }

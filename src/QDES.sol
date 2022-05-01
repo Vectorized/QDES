@@ -34,20 +34,20 @@ contract QDES {
     constructor() {}
 
     /**
-     * @dev Returns the growth numerator (default: `101`).
+     * @dev Returns the surge numerator (default: `101`).
      * 
      * Override this function to return a different value.
      */
-    function _qdesGrowthNumerator() internal view virtual returns (uint64) {
+    function _qdesSurgeNumerator() internal view virtual returns (uint64) {
         return 101;
     }
 
     /**
-     * @dev Returns the growth denominator (default: `100`).
+     * @dev Returns the surge denominator (default: `100`).
      * 
      * Override this function to return a different value.
      */
-    function _qdesGrowthDenominator() internal view virtual returns (uint64) {
+    function _qdesSurgeDenominator() internal view virtual returns (uint64) {
         return 100;
     }
 
@@ -167,7 +167,7 @@ contract QDES {
      * This function is to be called inside the minting function.
      *
      * Each token purchased multiplies `_qdesLastPrice()` by 
-     * `_qdesGrowthNumerator() / _qdesGrowthDenominator()`, 
+     * `_qdesSurgeNumerator() / _qdesSurgeDenominator()`, 
      * and will only affect the price paid in future purchase transactions.
      *
      * All the tokens will be charged at `_qdesCurrentPrice()` at the start
@@ -193,15 +193,15 @@ contract QDES {
         uint256 requiredPayment = quantity * (currentPrice * scaleNumerator / scaleDenominator);
         if (msg.value < requiredPayment) revert InsufficientPayment();
 
-        uint256 growthNumerator = _qdesGrowthNumerator();
-        uint256 growthDenominator = _qdesGrowthDenominator();
+        uint256 surgeNumerator = _qdesSurgeNumerator();
+        uint256 surgeDenominator = _qdesSurgeDenominator();
         
         unchecked {
             // Exponential surge.
             assembly {
                 let nextPrice := currentPrice
                 for { let i := 0 } lt(i, quantity) { i := add(i, 1) } {
-                    nextPrice := div(mul(nextPrice, growthNumerator), growthDenominator)
+                    nextPrice := div(mul(nextPrice, surgeNumerator), surgeDenominator)
                 }
                 sstore(_qdesState.slot, or(shl(64, nextPrice), timestamp()))
             }

@@ -99,11 +99,11 @@ contract QDESTest is DSTest {
         price = qdes.currentPrice();
         uint256 quantity = 7;
         uint256 expectedNextPrice = price;
-        uint256 growthNumerator = qdes.growthNumerator();
-        uint256 growthDenominator = qdes.growthDenominator();
+        uint256 surgeNumerator = qdes.surgeNumerator();
+        uint256 surgeDenominator = qdes.surgeDenominator();
 
         for (uint256 i; i < quantity; ++i) {
-            expectedNextPrice = expectedNextPrice * growthNumerator / growthDenominator;
+            expectedNextPrice = expectedNextPrice * surgeNumerator / surgeDenominator;
         }
         qdes.purchase{value: price * quantity}(quantity);
         assertEq(qdes.currentPrice(), qdes.lastPrice());
@@ -139,11 +139,11 @@ contract QDESTest is DSTest {
         uint256 quantity = 7;
         qdes.purchase{value: price * quantity}(quantity);
         uint256 expectedNextPrice = price;
-        uint256 growthNumerator = qdes.growthNumerator();
-        uint256 growthDenominator = qdes.growthDenominator();
+        uint256 surgeNumerator = qdes.surgeNumerator();
+        uint256 surgeDenominator = qdes.surgeDenominator();
 
         for (uint256 i; i < quantity; ++i) {
-            expectedNextPrice = expectedNextPrice * growthNumerator / growthDenominator;
+            expectedNextPrice = expectedNextPrice * surgeNumerator / surgeDenominator;
         }
         assertEq(qdes.currentPrice(), expectedNextPrice);
     }
