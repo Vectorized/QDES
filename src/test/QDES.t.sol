@@ -37,7 +37,7 @@ contract QDESTest is DSTest {
 
     function testLastPriceStarted() public {
         qdes.start();
-        assertEq(qdes.qdesLastPrice(), qdes.startingPrice());
+        assertEq(qdes.qdesLastPrice(), qdes.qdesStartingPrice());
     }
 
     function testLastTimestampStarted() public {
@@ -48,7 +48,7 @@ contract QDESTest is DSTest {
 
     function testCurrentPriceStarted() public {
         qdes.start();
-        assertEq(qdes.qdesCurrentPrice(), qdes.startingPrice());
+        assertEq(qdes.qdesCurrentPrice(), qdes.qdesStartingPrice());
     }
 
     function testCannotPurchaseIfNotStarted() public {
@@ -99,8 +99,8 @@ contract QDESTest is DSTest {
         price = qdes.qdesCurrentPrice();
         uint256 quantity = 7;
         uint256 expectedNextPrice = price;
-        uint256 surgeNumerator = qdes.surgeNumerator();
-        uint256 surgeDenominator = qdes.surgeDenominator();
+        uint256 surgeNumerator = qdes.qdesSurgeNumerator();
+        uint256 surgeDenominator = qdes.qdesSurgeDenominator();
 
         for (uint256 i; i < quantity; ++i) {
             expectedNextPrice = expectedNextPrice * surgeNumerator / surgeDenominator;
@@ -116,18 +116,18 @@ contract QDESTest is DSTest {
         uint256 startPrice = qdes.qdesCurrentPrice();
         vm.warp(1000000 + 86400 / 2);
         uint256 halfDecayedPrice = qdes.qdesCurrentPrice();
-        assertLt(halfDecayedPrice, (startPrice + qdes.bottomPrice()) / 2);
-        assertGt(halfDecayedPrice, qdes.bottomPrice());
+        assertLt(halfDecayedPrice, (startPrice + qdes.qdesBottomPrice()) / 2);
+        assertGt(halfDecayedPrice, qdes.qdesBottomPrice());
         vm.warp(1000000 + 86400 - 1);
         uint256 almostFullDecayedPrice = qdes.qdesCurrentPrice();
         assertLt(almostFullDecayedPrice, halfDecayedPrice);
-        assertGt(almostFullDecayedPrice, qdes.bottomPrice());
+        assertGt(almostFullDecayedPrice, qdes.qdesBottomPrice());
         vm.warp(1000000 + 86400);
-        assertEq(qdes.qdesCurrentPrice(), qdes.bottomPrice());
+        assertEq(qdes.qdesCurrentPrice(), qdes.qdesBottomPrice());
         vm.warp(1000000 + 86400 + 1);
-        assertEq(qdes.qdesCurrentPrice(), qdes.bottomPrice());
+        assertEq(qdes.qdesCurrentPrice(), qdes.qdesBottomPrice());
         vm.warp(1000000 + 86400 + 10000000);
-        assertEq(qdes.qdesCurrentPrice(), qdes.bottomPrice());
+        assertEq(qdes.qdesCurrentPrice(), qdes.qdesBottomPrice());
     }
 
     function testQuadraticDecayExponentialSurge() public {
@@ -139,8 +139,8 @@ contract QDESTest is DSTest {
         uint256 quantity = 7;
         qdes.purchase{value: price * quantity}(quantity);
         uint256 expectedNextPrice = price;
-        uint256 surgeNumerator = qdes.surgeNumerator();
-        uint256 surgeDenominator = qdes.surgeDenominator();
+        uint256 surgeNumerator = qdes.qdesSurgeNumerator();
+        uint256 surgeDenominator = qdes.qdesSurgeDenominator();
 
         for (uint256 i; i < quantity; ++i) {
             expectedNextPrice = expectedNextPrice * surgeNumerator / surgeDenominator;

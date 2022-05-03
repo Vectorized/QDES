@@ -38,7 +38,7 @@ contract QDES {
      * 
      * Override this function to return a different value.
      */
-    function _qdesSurgeNumerator() internal view virtual returns (uint64) {
+    function qdesSurgeNumerator() public view virtual returns (uint64) {
         return 101;
     }
 
@@ -47,7 +47,7 @@ contract QDES {
      * 
      * Override this function to return a different value.
      */
-    function _qdesSurgeDenominator() internal view virtual returns (uint64) {
+    function qdesSurgeDenominator() public view virtual returns (uint64) {
         return 100;
     }
 
@@ -56,7 +56,7 @@ contract QDES {
      * 
      * Override this function to return a different value.
      */
-    function _qdesDecayTime() internal view virtual returns (uint64) {
+    function qdesDecayTime() public view virtual returns (uint64) {
         return 86400;
     }
 
@@ -65,7 +65,7 @@ contract QDES {
      * 
      * Override this function to return a different value.
      */
-    function _qdesStartingPrice() internal view virtual returns (uint192) {
+    function qdesStartingPrice() public view virtual returns (uint192) {
         return 1000000000000000000;
     }
 
@@ -74,7 +74,7 @@ contract QDES {
      * 
      * Override this function to return a different value.
      */
-    function _qdesBottomPrice() internal view virtual returns (uint192) {
+    function qdesBottomPrice() public view virtual returns (uint192) {
         return 500000000000000000;
     }
 
@@ -82,7 +82,7 @@ contract QDES {
      * @dev Starts the QDES algorithm.
      */
     function _qdesStart() internal {
-        uint256 startingPrice = _qdesStartingPrice();
+        uint256 startingPrice = qdesStartingPrice();
         assembly {
             sstore(_qdesState.slot, or(shl(64, startingPrice), timestamp()))
         }
@@ -109,12 +109,12 @@ contract QDES {
     /**
      * @dev Returns the current purchase price per token.
      *
-     * The price decays quadratically from `_qdesLastPrice()` to `_qdesBottomPrice()` as
-     * `block.timestamp - _qdesLastTimestamp()` approaches `_qdesDecayTime()`.
+     * The price decays quadratically from `qdesLastPrice()` to `qdesBottomPrice()` as
+     * `block.timestamp - qdesLastTimestamp()` approaches `qdesDecayTime()`.
      */
     function qdesCurrentPrice() public view returns (uint192 currentPrice) {
-        uint256 decayTime = _qdesDecayTime();
-        uint256 bottomPrice = _qdesBottomPrice();
+        uint256 decayTime = qdesDecayTime();
+        uint256 bottomPrice = qdesBottomPrice();
         
         assembly {
             let currentTimestamp := timestamp()
@@ -148,16 +148,16 @@ contract QDES {
      *
      * This function is to be called inside the minting function.
      *
-     * Each token purchased multiplies `_qdesLastPrice()` by 
-     * `_qdesSurgeNumerator() / _qdesSurgeDenominator()`, 
+     * Each token purchased multiplies `qdesLastPrice()` by 
+     * `qdesSurgeNumerator() / qdesSurgeDenominator()`, 
      * and will only affect the price paid in future purchase transactions.
      *
-     * All the tokens will be charged at `_qdesCurrentPrice()` at the start
+     * All the tokens will be charged at `qdesCurrentPrice()` at the start
      * of the function. This incentivises bulk purchases to avoid incuring
      * exponentially increasing unit prices, reducing the network load.
      * 
      * If the `msg.value` is greater or equal to the required payment, 
-     * `quantity * (_qdesCurrentPrice() * scaleNumerator / scaleDenominator)`,
+     * `quantity * (qdesCurrentPrice() * scaleNumerator / scaleDenominator)`,
      * the excess is refunded.
      * 
      * Otherwise, the transaction reverts.
@@ -175,8 +175,8 @@ contract QDES {
         uint256 requiredPayment = quantity * (price * scaleNumerator / scaleDenominator);
         if (msg.value < requiredPayment) revert QDESInsufficientPayment();
 
-        uint256 surgeNumerator = _qdesSurgeNumerator();
-        uint256 surgeDenominator = _qdesSurgeDenominator();
+        uint256 surgeNumerator = qdesSurgeNumerator();
+        uint256 surgeDenominator = qdesSurgeDenominator();
         
         unchecked {
             // Exponential surge.
