@@ -12,22 +12,22 @@ contract QDES {
     /**
      * Cannot purchase zero tokens.
      */
-    error PurchaseZeroQuantity();
+    error QDESPurchaseZeroQuantity();
 
     /**
      * Insufficient payment.
      */
-    error InsufficientPayment();
+    error QDESInsufficientPayment();
 
     /**
      * Unable to refund excess payment.
      */
-    error RefundFailed();
+    error QDESRefundFailed();
 
     /**
      * Not started.
      */
-    error NotStarted();
+    error QDESNotStarted();
 
     uint256 private _qdesState;
 
@@ -91,16 +91,16 @@ contract QDES {
     /**
      * @dev Returns the previous purchase timestamp.
      */
-    function _qdesLastTimestamp() internal view returns (uint64 result) {
+    function qdesLastTimestamp() public view returns (uint64 result) {
         assembly {
-            result := and(sload(_qdesState.slot), 0xffffffffffffffff)
+            result := sload(_qdesState.slot)
         }
     }
 
     /**
      * @dev Returns the previous purchase price per token.
      */
-    function _qdesLastPrice() internal view returns (uint192 result) {
+    function qdesLastPrice() public view returns (uint192 result) {
         assembly {
             result := shr(64, sload(_qdesState.slot))
         }
@@ -112,7 +112,7 @@ contract QDES {
      * The price decays quadratically from `_qdesLastPrice()` to `_qdesBottomPrice()` as
      * `block.timestamp - _qdesLastTimestamp()` approaches `_qdesDecayTime()`.
      */
-    function _qdesCurrentPrice() internal view returns (uint192 currentPrice) {
+    function qdesCurrentPrice() public view returns (uint192 currentPrice) {
         uint256 decayTime = _qdesDecayTime();
         uint256 bottomPrice = _qdesBottomPrice();
         
@@ -144,24 +144,6 @@ contract QDES {
     }
 
     /**
-     * @notice Returns the previous purchase timestamp.
-     *
-     * @dev The previous timestamp can be useful to estimate a max bid price per token.
-     */
-    function qdesLastTimestamp() public view returns (uint64) {
-        return _qdesLastTimestamp();
-    }
-
-    /**
-     * @notice Returns the current purchase price per token.
-     *
-     * @dev This current price is essential for UI, and is thus exposed as a public function.
-     */
-    function qdesCurrentPrice() public view returns (uint192) {
-        return _qdesCurrentPrice();
-    }
-
-    /**
      * @dev Purchase `quantity` tokens.
      *
      * This function is to be called inside the minting function.
@@ -185,13 +167,13 @@ contract QDES {
         uint256 scaleNumerator,
         uint256 scaleDenominator
     ) internal {
-        if (quantity == 0) revert PurchaseZeroQuantity();
-        if (_qdesState == 0) revert NotStarted();
+        if (quantity == 0) revert QDESPurchaseZeroQuantity();
+        if (_qdesState == 0) revert QDESNotStarted();
 
-        uint256 currentPrice = _qdesCurrentPrice();
+        uint256 price = qdesCurrentPrice();
 
-        uint256 requiredPayment = quantity * (currentPrice * scaleNumerator / scaleDenominator);
-        if (msg.value < requiredPayment) revert InsufficientPayment();
+        uint256 requiredPayment = quantity * (price * scaleNumerator / scaleDenominator);
+        if (msg.value < requiredPayment) revert QDESInsufficientPayment();
 
         uint256 surgeNumerator = _qdesSurgeNumerator();
         uint256 surgeDenominator = _qdesSurgeDenominator();
@@ -199,17 +181,16 @@ contract QDES {
         unchecked {
             // Exponential surge.
             assembly {
-                let nextPrice := currentPrice
                 for { let i := 0 } lt(i, quantity) { i := add(i, 1) } {
-                    nextPrice := div(mul(nextPrice, surgeNumerator), surgeDenominator)
+                    price := div(mul(price, surgeNumerator), surgeDenominator)
                 }
-                sstore(_qdesState.slot, or(shl(64, nextPrice), timestamp()))
+                sstore(_qdesState.slot, or(shl(64, price), timestamp()))
             }
 
             if (msg.value > requiredPayment) {
                 uint256 refund = msg.value - requiredPayment;
                 (bool sent, ) = msg.sender.call{value: refund}("");
-                if (!sent) revert RefundFailed();
+                if (!sent) revert QDESRefundFailed();
             }
         }
     }

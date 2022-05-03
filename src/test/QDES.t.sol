@@ -6,69 +6,69 @@ import {Utilities} from "./utils/Utilities.sol";
 import {console} from "./utils/Console.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-import {MockQDES, QDES} from "./mock/MockQDES.sol";
+import {QDESMock, QDES} from "./mock/QDESMock.sol";
 
 contract QDESTest is DSTest {
     Vm internal immutable vm = Vm(HEVM_ADDRESS);
     Utilities internal utils;
     address payable[] internal users;
-    MockQDES internal qdes;
+    QDESMock internal qdes;
 
     function setUp() public {
         utils = new Utilities();
         users = utils.createUsers(2);
-        qdes = new MockQDES();
+        qdes = new QDESMock();
         vm.deal(address(this), 100000 ether);
         vm.deal(address(users[0]), 100000 ether);
         vm.deal(address(users[1]), 100000 ether);
     }
 
     function testLastPriceNotStarted() public {
-        assertEq(qdes.lastPrice(), 0);
+        assertEq(qdes.qdesLastPrice(), 0);
     }
     
     function testLastTimestampNotStarted() public {
-        assertEq(qdes.lastTimestamp(), 0);
+        assertEq(qdes.qdesLastTimestamp(), 0);
     }
     
     function testCurrentPriceNotStarted() public {
-        assertEq(qdes.currentPrice(), 0);
+        assertEq(qdes.qdesCurrentPrice(), 0);
     }
 
     function testLastPriceStarted() public {
         qdes.start();
-        assertEq(qdes.lastPrice(), qdes.startingPrice());
+        assertEq(qdes.qdesLastPrice(), qdes.startingPrice());
     }
 
     function testLastTimestampStarted() public {
         vm.warp(123456789);
         qdes.start();
-        assertEq(qdes.lastTimestamp(), 123456789);
+        assertEq(qdes.qdesLastTimestamp(), 123456789);
     }
 
     function testCurrentPriceStarted() public {
         qdes.start();
-        assertEq(qdes.currentPrice(), qdes.startingPrice());
+        assertEq(qdes.qdesCurrentPrice(), qdes.startingPrice());
     }
 
     function testCannotPurchaseIfNotStarted() public {
-        vm.expectRevert(QDES.NotStarted.selector);
+        vm.expectRevert(QDES.QDESNotStarted.selector);
         qdes.purchase{value: 10}(1);
     }
 
     function testCannotPurchaseIfUnderpaid() public {
         qdes.start();
-        vm.expectRevert(QDES.InsufficientPayment.selector);
+        vm.expectRevert(QDES.QDESInsufficientPayment.selector);
         qdes.purchase{value: 0}(1);
-        uint256 price = qdes.currentPrice();
-        vm.expectRevert(QDES.InsufficientPayment.selector);
+        uint256 price = qdes.qdesCurrentPrice();
+        vm.expectRevert(QDES.QDESInsufficientPayment.selector);
         qdes.purchase{value: price - 1}(1);
     }
 
     function testCannotPurchaseZeroQuantity() public {
         qdes.start();
-        uint256 price = qdes.currentPrice();
-        vm.expectRevert(QDES.PurchaseZeroQuantity.selector);
+        uint256 price = qdes.qdesCurrentPrice();
+        vm.expectRevert(QDES.QDESPurchaseZeroQuantity.selector);
         qdes.purchase{value: price}(0);
     }
 
@@ -79,13 +79,13 @@ contract QDESTest is DSTest {
         uint256 initialBalance = address(users[0]).balance;
 
         qdes.start();
-        price = qdes.currentPrice();
+        price = qdes.qdesCurrentPrice();
         qdes.purchase{value: price}(1);
 
         expectedBalance = initialBalance - price;
         assertEq(address(users[0]).balance, expectedBalance);
 
-        price = qdes.currentPrice();
+        price = qdes.qdesCurrentPrice();
         qdes.purchase{value: price + 1}(1);
         expectedBalance = expectedBalance - price;
         assertEq(address(users[0]).balance, expectedBalance);
@@ -96,7 +96,7 @@ contract QDESTest is DSTest {
     function testExponentialSurge() public {
         uint256 price;
         qdes.start();
-        price = qdes.currentPrice();
+        price = qdes.qdesCurrentPrice();
         uint256 quantity = 7;
         uint256 expectedNextPrice = price;
         uint256 surgeNumerator = qdes.surgeNumerator();
@@ -106,28 +106,28 @@ contract QDESTest is DSTest {
             expectedNextPrice = expectedNextPrice * surgeNumerator / surgeDenominator;
         }
         qdes.purchase{value: price * quantity}(quantity);
-        assertEq(qdes.currentPrice(), qdes.lastPrice());
-        assertEq(qdes.currentPrice(), expectedNextPrice);
+        assertEq(qdes.qdesCurrentPrice(), qdes.qdesLastPrice());
+        assertEq(qdes.qdesCurrentPrice(), expectedNextPrice);
     }
 
     function testQuadraticDecay() public {
         vm.warp(1000000);
         qdes.start();
-        uint256 startPrice = qdes.currentPrice();
+        uint256 startPrice = qdes.qdesCurrentPrice();
         vm.warp(1000000 + 86400 / 2);
-        uint256 halfDecayedPrice = qdes.currentPrice();
+        uint256 halfDecayedPrice = qdes.qdesCurrentPrice();
         assertLt(halfDecayedPrice, (startPrice + qdes.bottomPrice()) / 2);
         assertGt(halfDecayedPrice, qdes.bottomPrice());
         vm.warp(1000000 + 86400 - 1);
-        uint256 almostFullDecayedPrice = qdes.currentPrice();
+        uint256 almostFullDecayedPrice = qdes.qdesCurrentPrice();
         assertLt(almostFullDecayedPrice, halfDecayedPrice);
         assertGt(almostFullDecayedPrice, qdes.bottomPrice());
         vm.warp(1000000 + 86400);
-        assertEq(qdes.currentPrice(), qdes.bottomPrice());
+        assertEq(qdes.qdesCurrentPrice(), qdes.bottomPrice());
         vm.warp(1000000 + 86400 + 1);
-        assertEq(qdes.currentPrice(), qdes.bottomPrice());
+        assertEq(qdes.qdesCurrentPrice(), qdes.bottomPrice());
         vm.warp(1000000 + 86400 + 10000000);
-        assertEq(qdes.currentPrice(), qdes.bottomPrice());
+        assertEq(qdes.qdesCurrentPrice(), qdes.bottomPrice());
     }
 
     function testQuadraticDecayExponentialSurge() public {
@@ -135,7 +135,7 @@ contract QDESTest is DSTest {
         vm.warp(1000000);
         qdes.start();
         vm.warp(1000000 + 86400 / 2);
-        price = qdes.currentPrice();
+        price = qdes.qdesCurrentPrice();
         uint256 quantity = 7;
         qdes.purchase{value: price * quantity}(quantity);
         uint256 expectedNextPrice = price;
@@ -145,7 +145,7 @@ contract QDESTest is DSTest {
         for (uint256 i; i < quantity; ++i) {
             expectedNextPrice = expectedNextPrice * surgeNumerator / surgeDenominator;
         }
-        assertEq(qdes.currentPrice(), expectedNextPrice);
+        assertEq(qdes.qdesCurrentPrice(), expectedNextPrice);
     }
 }
 
@@ -153,12 +153,12 @@ contract QDESBenchmark is DSTest {
     Vm internal immutable vm = Vm(HEVM_ADDRESS);
     Utilities internal utils;
     address payable[] internal users;
-    MockQDES internal qdes;
+    QDESMock internal qdes;
 
     function setUp() public {
         utils = new Utilities();
         users = utils.createUsers(2);
-        qdes = new MockQDES();
+        qdes = new QDESMock();
         vm.deal(address(this), 100000 ether);
         vm.deal(address(users[0]), 100000 ether);
         vm.deal(address(users[1]), 100000 ether);
@@ -168,14 +168,14 @@ contract QDESBenchmark is DSTest {
     }
 
     function testCurrentPriceGas() public {
-        qdes.currentPrice();
+        qdes.qdesCurrentPrice();
     }
 
     function testPurchaseOneGas() public {
-        qdes.purchase{value: qdes.currentPrice() * 1}(1);
+        qdes.purchase{value: qdes.qdesCurrentPrice() * 1}(1);
     }
 
     function testPurchaseTenGas() public {
-        qdes.purchase{value: qdes.currentPrice() * 10}(10);
+        qdes.purchase{value: qdes.qdesCurrentPrice() * 10}(10);
     }
 }
