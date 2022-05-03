@@ -20,6 +20,8 @@
   "devDependencies": {
     "prettier": "^2.5.1",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
-    "solhint": "^3.3.6"
+    "solhint": "^3.3.6", 
+    "minimist": ">=1.2.6",
+    "ansi-regex": ">=4.1.1"
   }
 }
