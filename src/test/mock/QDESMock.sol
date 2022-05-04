@@ -1,4 +1,6 @@
-// SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: MIT
+// Creator: vectorized.eth
+
 pragma solidity ^0.8.4;
 
 import {QDES} from "../../QDES.sol";

@@ -132,14 +132,13 @@ contract QDES {
             // priceDiff = max(lastPrice - bottomPrice, 0)
             let priceDiff := mul(gt(lastPrice, bottomPrice), sub(lastPrice, bottomPrice))
             
-            currentPrice := bottomPrice
-            if lt(timeDiff, decayTime) {
-                // p = priceDiff * timeDiff / decayTime
-                let p := div(mul(priceDiff, timeDiff), decayTime)
-                // currentPrice = lastPrice - (2 * p) + (p * timeDiff / decayTime)
-                currentPrice := add(sub(sub(lastPrice, p), p), div(mul(p, timeDiff), decayTime))    
-            }
+            // timeDiff = min(decayTime, timeDiff)
+            timeDiff := sub(decayTime, mul(lt(timeDiff, decayTime), sub(decayTime, timeDiff)))
             
+            // p = priceDiff * timeDiff / decayTime
+            let p := div(mul(priceDiff, timeDiff), decayTime)
+            // currentPrice = lastPrice - (2 * p) + (p * timeDiff / decayTime)
+            currentPrice := add(sub(sub(lastPrice, p), p), div(mul(p, timeDiff), decayTime))    
         }
     }
 
@@ -168,25 +167,29 @@ contract QDES {
         uint256 scaleDenominator
     ) internal {
         if (quantity == 0) revert QDESPurchaseZeroQuantity();
-        if (_qdesState == 0) revert QDESNotStarted();
+        
+        uint256 currentPrice = qdesCurrentPrice();
 
-        uint256 price = qdesCurrentPrice();
-
-        uint256 requiredPayment = quantity * (price * scaleNumerator / scaleDenominator);
-        if (msg.value < requiredPayment) revert QDESInsufficientPayment();
+        if (currentPrice == 0 && _qdesState == 0) revert QDESNotStarted();        
 
         uint256 surgeNumerator = qdesSurgeNumerator();
         uint256 surgeDenominator = qdesSurgeDenominator();
-        
-        unchecked {
-            // Exponential surge.
-            assembly {
-                for { let i := 0 } lt(i, quantity) { i := add(i, 1) } {
-                    price := div(mul(price, surgeNumerator), surgeDenominator)
-                }
-                sstore(_qdesState.slot, or(shl(64, price), timestamp()))
-            }
+        uint256 requiredPayment;
 
+        assembly {
+            // Exponential surge.
+            let price := div(mul(currentPrice, surgeNumerator), surgeDenominator)
+            for { let i := sub(quantity, 1) } i { i := sub(i, 1) } {
+                price := div(mul(price, surgeNumerator), surgeDenominator)
+            }
+            sstore(_qdesState.slot, or(shl(64, price), timestamp()))
+
+            requiredPayment := mul(quantity, div(mul(currentPrice, scaleNumerator), scaleDenominator))
+        }
+
+        if (msg.value < requiredPayment) revert QDESInsufficientPayment();
+
+        unchecked {
             if (msg.value > requiredPayment) {
                 uint256 refund = msg.value - requiredPayment;
                 (bool sent, ) = msg.sender.call{value: refund}("");
