@@ -29,7 +29,11 @@ contract QDES {
      */
     error QDESNotStarted();
 
-    uint256 private _qdesState;
+    /**
+     * @dev `keccak256("QDES_STATE_SLOT")`.
+     */
+    uint256 private constant QDES_STATE_SLOT = 0xe1ad96ab4a2a322eaedcc880654f108e9d75d8996494b0a370912ff23b0eaa63;
+
 
     constructor() {}
 
@@ -83,8 +87,9 @@ contract QDES {
      */
     function _qdesStart() internal {
         uint256 startingPrice = qdesStartingPrice();
+        /// @solidity memory-safe-assembly
         assembly {
-            sstore(_qdesState.slot, or(shl(64, startingPrice), timestamp()))
+            sstore(QDES_STATE_SLOT, or(shl(64, startingPrice), timestamp()))
         }
     }
 
@@ -92,8 +97,9 @@ contract QDES {
      * @dev Returns the previous purchase timestamp.
      */
     function qdesLastTimestamp() public view returns (uint64 result) {
+        /// @solidity memory-safe-assembly
         assembly {
-            result := sload(_qdesState.slot)
+            result := sload(QDES_STATE_SLOT)
         }
     }
 
@@ -101,8 +107,9 @@ contract QDES {
      * @dev Returns the previous purchase price per token.
      */
     function qdesLastPrice() public view returns (uint192 result) {
+        /// @solidity memory-safe-assembly
         assembly {
-            result := shr(64, sload(_qdesState.slot))
+            result := shr(64, sload(QDES_STATE_SLOT))
         }
     }
 
@@ -116,19 +123,19 @@ contract QDES {
         uint256 decayTime = qdesDecayTime();
         uint256 bottomPrice = qdesBottomPrice();
         
+        /// @solidity memory-safe-assembly
         assembly {
-            let currentTimestamp := timestamp()
+            let blockTimestamp := timestamp()
 
             // Unpack the state.
-            let lastState := sload(_qdesState.slot)
+            let lastState := sload(QDES_STATE_SLOT)
             let lastTimestamp := and(lastState, 0xffffffffffffffff)
             let lastPrice := shr(64, lastState)
 
             // Quadratic decay.
 
-            // timeDiff = max(currentTimestamp - lastTimestamp, 0)
-            let timeDiff := mul(gt(currentTimestamp, lastTimestamp), 
-                sub(currentTimestamp, lastTimestamp))
+            // timeDiff = max(blockTimestamp - lastTimestamp, 0)
+            let timeDiff := mul(gt(blockTimestamp, lastTimestamp), sub(blockTimestamp, lastTimestamp))
             // priceDiff = max(lastPrice - bottomPrice, 0)
             let priceDiff := mul(gt(lastPrice, bottomPrice), sub(lastPrice, bottomPrice))
             
@@ -169,20 +176,26 @@ contract QDES {
         if (quantity == 0) revert QDESPurchaseZeroQuantity();
         
         uint256 currentPrice = qdesCurrentPrice();
+        uint256 currentState;
 
-        if (currentPrice == 0 && _qdesState == 0) revert QDESNotStarted();        
+        assembly {
+            currentState := sload(QDES_STATE_SLOT)
+        }
+
+        if (currentPrice == 0) if (currentState == 0) revert QDESNotStarted();        
 
         uint256 surgeNumerator = qdesSurgeNumerator();
         uint256 surgeDenominator = qdesSurgeDenominator();
         uint256 requiredPayment;
 
+        /// @solidity memory-safe-assembly
         assembly {
             // Exponential surge.
             let price := div(mul(currentPrice, surgeNumerator), surgeDenominator)
             for { let i := sub(quantity, 1) } i { i := sub(i, 1) } {
                 price := div(mul(price, surgeNumerator), surgeDenominator)
             }
-            sstore(_qdesState.slot, or(shl(64, price), timestamp()))
+            sstore(QDES_STATE_SLOT, or(shl(64, price), timestamp()))
 
             requiredPayment := mul(quantity, div(mul(currentPrice, scaleNumerator), scaleDenominator))
         }

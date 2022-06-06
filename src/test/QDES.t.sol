@@ -167,7 +167,7 @@ contract QDESBenchmark is DSTest {
         vm.warp(1000000 + 86400 / 2);
     }
 
-    function testCurrentPriceGas() public {
+    function testCurrentPriceGas() public view {
         qdes.qdesCurrentPrice();
     }
 
