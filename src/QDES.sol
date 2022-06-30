@@ -12,22 +12,22 @@ contract QDES {
     /**
      * Cannot purchase zero tokens.
      */
-    error QDESPurchaseZeroQuantity();
+    error QDESPurchaseZeroQuantity(); // hex"94a9588e"
 
     /**
      * Insufficient payment.
      */
-    error QDESInsufficientPayment();
+    error QDESInsufficientPayment(); // hex"ba405d2e"
 
     /**
      * Unable to refund excess payment.
      */
-    error QDESRefundFailed();
+    error QDESRefundFailed(); // hex"0eea4fbd"
 
     /**
      * Not started.
      */
-    error QDESNotStarted();
+    error QDESNotStarted(); // hex"6177a37b"
 
     /**
      * @dev `keccak256("QDES_STATE_SLOT")`.
@@ -182,7 +182,7 @@ contract QDES {
             currentState := sload(QDES_STATE_SLOT)
         }
 
-        if (currentPrice == 0) if (currentState == 0) revert QDESNotStarted();        
+        if (currentState == 0) revert QDESNotStarted();        
 
         uint256 surgeNumerator = qdesSurgeNumerator();
         uint256 surgeDenominator = qdesSurgeDenominator();
