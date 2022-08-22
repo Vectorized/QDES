@@ -6,18 +6,18 @@ import {Utilities} from "./utils/Utilities.sol";
 import {console} from "./utils/Console.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-import {QDESMock, QDES} from "./mock/QDESMock.sol";
+import {MockQDES, QDES} from "./mock/MockQDES.sol";
 
 contract QDESTest is DSTest {
     Vm internal immutable vm = Vm(HEVM_ADDRESS);
     Utilities internal utils;
     address payable[] internal users;
-    QDESMock internal qdes;
+    MockQDES internal qdes;
 
     function setUp() public {
         utils = new Utilities();
         users = utils.createUsers(2);
-        qdes = new QDESMock();
+        qdes = new MockQDES();
         vm.deal(address(this), 100000 ether);
         vm.deal(address(users[0]), 100000 ether);
         vm.deal(address(users[1]), 100000 ether);
@@ -153,12 +153,12 @@ contract QDESBenchmark is DSTest {
     Vm internal immutable vm = Vm(HEVM_ADDRESS);
     Utilities internal utils;
     address payable[] internal users;
-    QDESMock internal qdes;
+    MockQDES internal qdes;
 
     function setUp() public {
         utils = new Utilities();
         users = utils.createUsers(2);
-        qdes = new QDESMock();
+        qdes = new MockQDES();
         vm.deal(address(this), 100000 ether);
         vm.deal(address(users[0]), 100000 ether);
         vm.deal(address(users[1]), 100000 ether);

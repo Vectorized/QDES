@@ -5,7 +5,7 @@ pragma solidity ^0.8.4;
 
 import {QDES} from "../../QDES.sol";
 
-contract QDESMock is QDES {
+contract MockQDES is QDES {
 
     function start() external {
         _qdesStart();

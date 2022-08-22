@@ -132,7 +132,8 @@ contract QDES {
             let lastTimestamp := and(lastState, 0xffffffffffffffff)
             let lastPrice := shr(64, lastState)
 
-            // Quadratic decay.
+            // Quadratically decay the price based on the time elapsed
+            // between the current time and the last purchased time.
 
             // timeDiff = max(blockTimestamp - lastTimestamp, 0)
             let timeDiff := mul(gt(blockTimestamp, lastTimestamp), sub(blockTimestamp, lastTimestamp))
@@ -173,40 +174,57 @@ contract QDES {
         uint256 scaleNumerator,
         uint256 scaleDenominator
     ) internal {
-        if (quantity == 0) revert QDESPurchaseZeroQuantity();
-        
-        uint256 currentPrice = qdesCurrentPrice();
-        uint256 currentState;
-
         assembly {
-            currentState := sload(QDES_STATE_SLOT)
+            if iszero(quantity) {
+                // Store the function selector of `QDESPurchaseZeroQuantity()`.
+                mstore(0x00, 0x94a9588e)
+                // Revert with (offset, size).
+                revert(0x1c, 0x04)
+            }
+
+            if iszero(sload(QDES_STATE_SLOT)) {
+                // Store the function selector of `QDESNotStarted()`.
+                mstore(0x00, 0x6177a37b)
+                // Revert with (offset, size).
+                revert(0x1c, 0x04)
+            }
         }
 
-        if (currentState == 0) revert QDESNotStarted();        
-
+        uint256 currentPrice = qdesCurrentPrice();
         uint256 surgeNumerator = qdesSurgeNumerator();
         uint256 surgeDenominator = qdesSurgeDenominator();
-        uint256 requiredPayment;
 
         /// @solidity memory-safe-assembly
         assembly {
-            // Exponential surge.
-            let price := div(mul(currentPrice, surgeNumerator), surgeDenominator)
-            for { let i := sub(quantity, 1) } i { i := sub(i, 1) } {
+            let requiredPayment := mul(quantity, div(mul(currentPrice, scaleNumerator), scaleDenominator))
+            
+            if lt(callvalue(), requiredPayment) {
+                // Store the function selector of `QDESInsufficientPayment()`.
+                mstore(0x00, 0xba405d2e)
+                // Revert with (offset, size).
+                revert(0x1c, 0x04)
+            }
+
+            // Exponentially surge the price, and store it for the next buyer.
+            let price := currentPrice
+            let i := quantity
+            // prettier-ignore
+            for {} 1 {} {
                 price := div(mul(price, surgeNumerator), surgeDenominator)
+                i := sub(i, 1)
+                // prettier-ignore
+                if iszero(i) { break }
             }
             sstore(QDES_STATE_SLOT, or(shl(64, price), timestamp()))
 
-            requiredPayment := mul(quantity, div(mul(currentPrice, scaleNumerator), scaleDenominator))
-        }
-
-        if (msg.value < requiredPayment) revert QDESInsufficientPayment();
-
-        unchecked {
-            if (msg.value > requiredPayment) {
-                uint256 refund = msg.value - requiredPayment;
-                (bool sent, ) = msg.sender.call{value: refund}("");
-                if (!sent) revert QDESRefundFailed();
+            if gt(callvalue(), requiredPayment) {
+                // Transfer the ETH and check if it succeeded or not.
+                if iszero(call(gas(), caller(), sub(callvalue(), requiredPayment), 0, 0, 0, 0)) {
+                    // Store the function selector of `QDESRefundFailed()`.
+                    mstore(0x00, 0x0eea4fbd)
+                    // Revert with (offset, size).
+                    revert(0x1c, 0x04)
+                }
             }
         }
     }

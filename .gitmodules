@@ -11,6 +11,3 @@
 	path = lib/ERC721A
 	url = https://github.com/chiru-labs/ERC721A
 	branch = main
-[submodule "lib/solady"]
-	path = lib/solady
-	url = https://github.com/vectorized/solady
